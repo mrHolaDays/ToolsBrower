@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Менеджер расширений</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>📦 Менеджер расширений</h1>
+        
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showTab('installed')">Установленные</button>
+            <button class="tab-btn" onclick="showTab('available')">Доступные</button>
+            <button class="tab-btn" onclick="showTab('settings')">Настройки</button>
+        </div>
+
+        <div id="installed-tab" class="tab-content active">
+            <h2>Установленные расширения</h2>
+            <div id="installed-extensions" class="extensions-list">
+                <div class="loading">Загрузка...</div>
+            </div>
+        </div>
+
+        <div id="available-tab" class="tab-content">
+            <h2>Доступные расширения</h2>
+            <div class="input-group">
+                <input type="text" id="github-url" placeholder="URL JSON файла с расширениями">
+                <button onclick="loadRemoteExtensions()">Загрузить список</button>
+            </div>
+            <div id="available-extensions" class="extensions-list">
+                <div class="loading">Загрузите список расширений</div>
+            </div>
+        </div>
+
+        <div id="settings-tab" class="tab-content">
+            <h2>Настройки</h2>
+            <div class="settings-group">
+                <button onclick="openAdditionsFolder()">📁 Открыть папку расширений</button>
+                <button onclick="reloadBrowser()">🔄 Перезагрузить браузер</button>
+                <button onclick="clearCache()">🧹 Очистить кэш</button>
+            </div>
+        </div>
+
+        <div id="message" class="message hidden"></div>
+    </div>
+
+    <script src="manager.js"></script>
+</body>
+</html>
