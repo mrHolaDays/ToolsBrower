@@ -1,1 +1,9 @@
-
+{
+    "name": "Extension Manager",
+    "description": "Управление загрузкой и удалением расширений",
+    "version": "1.0.0",
+    "based_on": "python",
+    "start": "manager.py",
+    "link": "http://localhost:5000",
+    "logo": "📦"
+}
