@@ -3,7 +3,7 @@ import os
 import json
 import subprocess
 from pathlib import Path
-from PySide6.QtCore import QUrl, Qt, QSize, QPropertyAnimation, QEasingCurve, QProcess, Signal,QProcessEnvironment
+from PySide6.QtCore import QUrl, Qt, QSize, QPropertyAnimation, QEasingCurve, QProcess, Signal, QProcessEnvironment
 from PySide6.QtWidgets import (QApplication, QMainWindow, QLineEdit, QToolBar, 
                                QPushButton, QWidget, QVBoxLayout, QHBoxLayout, 
                                QFrame, QLabel, QTabWidget, QStyle, QScrollArea,
@@ -296,10 +296,12 @@ class Browser(QMainWindow):
             }
         """)
         self.extensions_scroll.setWidgetResizable(True)
+        self.extensions_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         
         self.extensions_widget = QWidget()
         self.extensions_layout = QVBoxLayout(self.extensions_widget)
         self.extensions_layout.setSpacing(5)
+        self.extensions_layout.setAlignment(Qt.AlignTop)
         
         self.extensions_scroll.setWidget(self.extensions_widget)
         menu_layout.addWidget(self.extensions_scroll)
@@ -391,6 +393,13 @@ class Browser(QMainWindow):
         reload_btn.clicked.connect(self.navigate_reload)
         navbar.addWidget(reload_btn)
         
+        # Кнопка домой
+        home_btn = QPushButton()
+        home_btn.setIcon(self.style().standardIcon(QStyle.SP_DirHomeIcon))
+        home_btn.setStyleSheet(self.get_toolbar_button_style())
+        home_btn.clicked.connect(self.navigate_home)
+        navbar.addWidget(home_btn)
+        
         # Поле для ввода пути к файлу
         self.url_bar = QLineEdit()
         self.url_bar.setStyleSheet("""
@@ -409,7 +418,7 @@ class Browser(QMainWindow):
             }
         """)
         self.url_bar.setPlaceholderText("Введите URL или путь к файлу...")
-        self.url_bar.returnPressed.connect(self.navigate_to_file)
+        self.url_bar.returnPressed.connect(self.navigate_to_url)
         navbar.addWidget(self.url_bar)
         
         # Кнопка новой вкладки
@@ -469,7 +478,7 @@ class Browser(QMainWindow):
         main_layout.addWidget(browser_widget, 1)
         
         # Добавляем первую вкладку
-        self.add_new_tab(QUrl.fromLocalFile(''), 'Новая вкладка')
+        self.add_new_tab(QUrl("https://ya.ru"), 'Яндекс')
         
         # Анимация для меню
         self.menu_animation = QPropertyAnimation(self.menu_frame, b"minimumWidth")
@@ -559,13 +568,11 @@ class Browser(QMainWindow):
             ext_info = self.extension_manager.get_extension_info(name)
             if ext_info:
                 self.add_extension_widget(ext_info)
-        
-        # Добавляем растяжку
-        self.extensions_layout.addStretch()
     
     def add_extension_widget(self, ext_info):
         """Добавляет виджет расширения в список"""
         ext_frame = QFrame()
+        ext_frame.setFixedHeight(50)
         ext_frame.setStyleSheet("""
             QFrame {
                 background-color: #2d2d2d;
@@ -576,7 +583,6 @@ class Browser(QMainWindow):
                 background-color: #3d3d3d;
             }
         """)
-        ext_frame.setFixedHeight(60)
         
         layout = QHBoxLayout(ext_frame)
         layout.setContentsMargins(5, 5, 5, 5)
@@ -592,12 +598,12 @@ class Browser(QMainWindow):
         info_layout.setContentsMargins(0, 0, 0, 0)
         
         name_label = QLabel(ext_info['name'])
-        name_label.setStyleSheet("color: white; font-weight: bold;")
+        name_label.setStyleSheet("color: white; font-weight: bold; font-size: 11px;")
         info_layout.addWidget(name_label)
         
-        desc_label = QLabel(ext_info['description'][:20] + "...")
-        desc_label.setStyleSheet("color: #ccc; font-size: 10px;")
-        info_layout.addWidget(desc_label)
+        status_label = QLabel("Запущено" if ext_info['running'] else "Остановлено")
+        status_label.setStyleSheet("color: #4CAF50;" if ext_info['running'] else "color: #f44336; font-size: 9px;")
+        info_layout.addWidget(status_label)
         
         layout.addWidget(info_widget)
         
@@ -745,7 +751,7 @@ class Browser(QMainWindow):
     
     def add_new_tab(self, qurl=None, label="Новая вкладка"):
         if qurl is None:
-            qurl = QUrl.fromLocalFile('')
+            qurl = QUrl("https://ya.ru")
             
         browser = QWebEngineView()
         browser.setUrl(qurl)
@@ -759,7 +765,7 @@ class Browser(QMainWindow):
             
         # Обновляем заголовок вкладки при изменении заголовка страницы
         browser.loadFinished.connect(lambda _, i=i, browser=browser: 
-            self.tabs.setTabText(i, browser.page().title()[:15] + "..."))
+            self.tabs.setTabText(i, browser.page().title()[:15] + "..." if browser.page().title() else "Новая вкладка"))
     
     def tab_double_click(self, i):
         if i == -1:  # Двойной клик на пустом пространстве
@@ -783,22 +789,27 @@ class Browser(QMainWindow):
         else:
             self.url_bar.setText(qurl.toString())
     
-    def navigate_to_file(self):
-        file_path = self.url_bar.text()
-        if not file_path:
+    def navigate_to_url(self):
+        url_text = self.url_bar.text().strip()
+        if not url_text:
             return
-            
-        # Если путь относительный, преобразуем в абсолютный
-        if not os.path.isabs(file_path):
-            file_path = os.path.join(str(self.script_dir), file_path)
         
-        if os.path.exists(file_path) and file_path.endswith('.html'):
+        # Проверяем, является ли ввод путем к файлу
+        if os.path.exists(url_text) and url_text.endswith('.html'):
             # Для локальных файлов используем file:///
-            url = QUrl.fromLocalFile(os.path.abspath(file_path))
+            url = QUrl.fromLocalFile(os.path.abspath(url_text))
             self.tabs.currentWidget().setUrl(url)
         else:
-            # Можно также открывать обычные URL
-            self.tabs.currentWidget().setUrl(QUrl(file_path))
+            # Проверяем, содержит ли текст протокол
+            if not url_text.startswith(('http://', 'https://', 'file://')):
+                url_text = 'https://' + url_text
+            
+            # Открываем как URL
+            self.tabs.currentWidget().setUrl(QUrl(url_text))
+    
+    def navigate_home(self):
+        """Переход на домашнюю страницу"""
+        self.tabs.currentWidget().setUrl(QUrl("https://ya.ru"))
     
     def navigate_back(self):
         self.tabs.currentWidget().back()
